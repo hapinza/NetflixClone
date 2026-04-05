@@ -21,7 +21,7 @@ public class JwtProvider {
 
    // @Value("${jwt.secret}")
    //   @Value("${jwt.access-token-validity-ms}")
-    public JwtProvider( String secret, long accessTokenValidityMs){
+    public JwtProvider(String secret, long accessTokenValidityMs){
         this.key = Keys.hmacShaKeyFor(secret.getBytes());
         this.accessTokenValidityMs = accessTokenValidityMs;
     }

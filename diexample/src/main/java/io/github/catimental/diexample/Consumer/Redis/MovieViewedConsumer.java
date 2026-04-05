@@ -19,7 +19,7 @@ import org.springframework.data.redis.connection.stream.Consumer;
 import org.springframework.data.redis.connection.stream.StreamOffset;
 import java.time.Duration;
 import io.github.catimental.diexample.domain.event.FailedEvent;
-
+import io.github.catimental.diexample.domain.event.FailedEventStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import java.util.List;
@@ -93,7 +93,9 @@ public class MovieViewedConsumer {
                     failedEventRepository.save(new FailedEvent(
                         eventId == null ? "unknown" : eventId,
                         safePayload(msg),
-                        e.getMessage()
+                        e.getMessage(),
+                        0,
+                        FailedEventStatus.FAILED
                     ));
                 }catch(Exception saveEx){
                     log.error("Failed to persist failed event. eventId ={}", eventId, saveEx);

@@ -41,11 +41,12 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/members/register", "/api/members/login", "/auth/refresh", "/auth/logout",
-                "/movies/trending", "/analytics/views/**").permitAll()
+                "/movies/trending", "/analytics/views/**",  "/admin/failed-events/retry",
+                "/admin/failed-events/*/retry").permitAll()
                 .anyRequest().authenticated()
-            )
-            .addFilterBefore(new RateLimitFilter(limiter), UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(new JwtAuthFilter(jwtProvider), UsernamePasswordAuthenticationFilter.class);
+            );
+          //  .addFilterBefore(new RateLimitFilter(limiter), UsernamePasswordAuthenticationFilter.class)
+           // .addFilterBefore(new JwtAuthFilter(jwtProvider), UsernamePasswordAuthenticationFilter.class);
 
             return http.build();
         }

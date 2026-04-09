@@ -41,72 +41,105 @@ public class MovieViewedConsumer {
     private static final String GROUP = "movie-analytics-group";
     private static final String CONSUMER = "consumer-1";
 
-    @Scheduled(fixedDelay = 2000)
-    public void consume(){
-        /*
+    // Separate message consumption from processing logic.
+// This allows both the consumer and recovery scheduler to reuse the same processing flow.
+ /*
         String → stream (stream:movie:viewed)
         Object → field (eventId, movieId)
         Object → value ("10", "abc123")
         
         */
-        List<MapRecord<String,Object,Object>> messages = 
-            redisTemplate.opsForStream().read(
-                Consumer.from(GROUP, CONSUMER),
-                StreamReadOptions.empty().count(10).block(Duration.ofSeconds(1)),
-                StreamOffset.create(STREAM, ReadOffset.lastConsumed())
-            );
-
-        if(messages == null || messages.isEmpty()){
-            return ;
-        }
-
-        for(MapRecord<String, Object, Object> msg : messages){
-            String eventId = null;
-            try{
-                Map<Object, Object> value = msg.getValue();
-
-                eventId = (String)value.get("eventId");
-                Long movieId = Long.valueOf((String) value.get("movieId"));
-                String memberRaw = (String) value.get("memberId");
-                Long memberId = (memberRaw == null || memberRaw.isBlank()) ? null : Long.valueOf(memberRaw);
-
-                if (movieId == 999L) {
-                    throw new RuntimeException("forced test exception");
-                }
-
-
-                //processed_event 
-                processedEventRepository.save(new ProcessedEvent(eventId));
-
-
-                viewAggregationService.processedViewEvent(eventId, memberId, movieId);
-
-                redisTemplate.opsForStream().acknowledge(STREAM, GROUP, msg.getId());
-                // complete reading
-            }catch(DataIntegrityViolationException e){
-                log.info("Duplicate event skipped. eventId ={}", eventId);
-                redisTemplate.opsForStream().acknowledge(STREAM, GROUP, msg.getId());
-            }catch(Exception e){
-                log.error("Failed to process stream message id = {} ", msg.getId(), e);
-
-                try{
-                    failedEventRepository.save(new FailedEvent(
-                        eventId == null ? "unknown" : eventId,
-                        safePayload(msg),
-                        e.getMessage(),
-                        0,
-                        FailedEventStatus.FAILED
-                    ));
-                }catch(Exception saveEx){
-                    log.error("Failed to persist failed event. eventId ={}", eventId, saveEx);
-                }
-
-
+      @Scheduled(fixedDelay = 2000)
+        public void consumer() {
+            List<MapRecord<String, Object, Object>> messages =
+                redisTemplate.opsForStream().read(
+                    Consumer.from(GROUP, CONSUMER),
+                    StreamReadOptions.empty().count(10).block(Duration.ofSeconds(1)),
+                    //StreamOffset.create(STREAM, ReadOffset.lastConsumed())
+                    StreamOffset.create(STREAM, ReadOffset.from("0"))
+                );
+    
+            if (messages == null || messages.isEmpty()) {
+                return;
+            }
+    
+            for (MapRecord<String, Object, Object> msg : messages) {
+                processMessage(msg);
             }
         }
 
 
-    }
+
+    // @Scheduled(fixedDelay = 2000)
+    // public void consume(){
+       
+
+
+
+    //     List<MapRecord<String,Object,Object>> messages = 
+    //         redisTemplate.opsForStream().read(
+    //             Consumer.from(GROUP, CONSUMER),
+    //             StreamReadOptions.empty().count(10).block(Duration.ofSeconds(1)),
+    //             StreamOffset.create(STREAM, ReadOffset.lastConsumed())
+    //         );
+
+    //     if(messages == null || messages.isEmpty()){
+    //         return ;
+    //     }
+
+    //     for(MapRecord<String, Object, Object> msg : messages){
+    //         String eventId = null;
+    //         try{
+    //             Map<Object, Object> value = msg.getValue();
+
+    //             eventId = (String)value.get("eventId");
+    //             Long movieId = Long.valueOf((String) value.get("movieId"));
+    //             String memberRaw = (String) value.get("memberId");
+    //             Long memberId = (memberRaw == null || memberRaw.isBlank()) ? null : Long.valueOf(memberRaw);
+
+    //             if (movieId == 999L) {
+    //                 throw new RuntimeException("forced test exception");
+    //             }
+
+    //             viewAggregationService.processedViewEvent(eventId, memberId, movieId);
+    //             //processed_event 
+    //             processedEventRepository.save(new ProcessedEvent(eventId));
+
+
+               
+
+    //             redisTemplate.opsForStream().acknowledge(STREAM, GROUP, msg.getId());
+    //             // complete reading
+    //         }catch(DataIntegrityViolationException e){
+    //             log.info("Duplicate event skipped. eventId ={}", eventId);
+
+    //             redisTemplate.opsForStream().acknowledge(STREAM, GROUP, msg.getId());
+    //         }catch(Exception e){
+    //             //log.error("Failed to process stream message id = {} ", msg.getId(), e);
+    //             log.info("Consumed eventId={}, streamId={}", eventId, msg.getId());
+    //             log.info("DB process success eventId={}", eventId);
+    //             log.info("ACK success eventId={}", eventId);
+    //             log.error("DB process failed eventId={}", eventId, e);
+
+
+    //             try{
+    //                 failedEventRepository.save(new FailedEvent(
+    //                     eventId == null ? "unknown" : eventId,
+    //                     safePayload(msg),
+    //                     e.getMessage(),
+    //                     0,
+    //                     FailedEventStatus.FAILED
+    //                 ));
+    //             }catch(Exception saveEx){
+    //                 log.error("Failed to persist failed event. eventId ={}", eventId, saveEx);
+    //             }
+
+
+    //         }
+    //     }
+
+
+    // }
 
     private String safePayload(MapRecord<String, Object, Object> msg){
         try{
@@ -116,6 +149,50 @@ public class MovieViewedConsumer {
         }
 
     }
+
+    // Redis Stream Pending Entry -> DB dead
+    public void processMessage(MapRecord<String, Object, Object> msg) {
+        String eventId = null;
+        try {
+            Map<Object, Object> value = msg.getValue();
+    
+            eventId = (String) value.get("eventId");
+            Long movieId = Long.valueOf((String) value.get("movieId"));
+            String memberRaw = (String) value.get("memberId");
+            Long memberId = (memberRaw == null || memberRaw.isBlank()) ? null : Long.valueOf(memberRaw);
+    
+            if (movieId == 999L) {
+                throw new RuntimeException("forced test exception");
+            }
+    
+            viewAggregationService.processedViewEvent(eventId, memberId, movieId);
+            processedEventRepository.save(new ProcessedEvent(eventId));
+    
+            redisTemplate.opsForStream().acknowledge(STREAM, GROUP, msg.getId());
+            log.info("ACK success. eventId={}, recordId={}", eventId, msg.getId());
+    
+        } catch (DataIntegrityViolationException e) {
+            log.info("Duplicate event skipped. eventId={}", eventId);
+            redisTemplate.opsForStream().acknowledge(STREAM, GROUP, msg.getId());
+    
+        } catch (Exception e) {
+            log.error("Failed to process stream message. recordId={}, eventId={}", msg.getId(), eventId, e);
+    
+            try {
+                failedEventRepository.save(new FailedEvent(
+                    eventId == null ? "unknown" : eventId,
+                    safePayload(msg),
+                    e.getMessage(),
+                    0,
+                    FailedEventStatus.FAILED
+                ));
+            } catch (Exception saveEx) {
+                log.error("Failed to persist failed event. eventId={}", eventId, saveEx);
+            }
+        }
+    }
+
+
 
 
 

@@ -1,4 +1,7 @@
-package io.github.catimental.diexample.Service;
+
+
+
+       package io.github.catimental.diexample.Service;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -55,8 +58,8 @@ public class FailedEventRetryService{
                 failedEvent.getPayload(),
                 MovieViewedEventPayload.class
             );
-
-            Long memberId = Long.parseLong(payload.memberId());
+            String memberRaw = payload.memberId();
+            Long memberId = (memberRaw == null || memberRaw.isBlank()) ? null : Long.parseLong(memberRaw); 
             Long movieId = Long.parseLong(payload.movieId());
 
             viewAggregationService.processedViewEvent(
@@ -67,13 +70,15 @@ public class FailedEventRetryService{
 
 
 
-            processedEventRepository.save(
-                new ProcessedEvent(payload.eventId())
-            );
 
             failedEvent.setStatus(FailedEventStatus.RECOVERED);
             failedEvent.makeRecovered();
             failedEvent.makeRetried();
+
+            
+            processedEventRepository.save(
+                new ProcessedEvent(payload.eventId())
+            );
 
             return new RetryResult(true, "recovered");
         }catch (NumberFormatException | JsonProcessingException e) {

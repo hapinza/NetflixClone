@@ -21,7 +21,6 @@ import io.github.catimental.diexample.Repository.ViewEventRepository;
 
 
 @Service
-@Transactional
 @RequiredArgsConstructor
 public class ViewEventService {
     private final RedisMovieEventPublisher redisMovieEventPublisher;

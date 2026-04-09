@@ -24,11 +24,11 @@ public class OutboxPoller {
     private static final String STREAM_KEY = "like-events";
 
 
-    @Scheduled(fixedDelay = 3000)
+   @Scheduled(fixedDelay = 3000)
     @Transactional
     public void publishPendingEvents(){
         List<OutboxEvent> events =
-           outboxRepository.findTop100ByStatusAndRetryAtLessThanEqualOrderByIdAsc(
+           outboxRepository.findTop100ByStatusAndNextRetryAtLessThanEqualOrderByIdAsc(
             "PENDING",
             LocalDateTime.now()
         );

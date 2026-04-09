@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface OutboxRepository extends JpaRepository<OutboxEvent, Long>{
 
-    List<OutboxEvent> findTop100ByStatusAndRetryAtLessThanEqualOrderByIdAsc(
+    List<OutboxEvent> findTop100ByStatusAndNextRetryAtLessThanEqualOrderByIdAsc(
         String status, 
         LocalDateTime now
     );

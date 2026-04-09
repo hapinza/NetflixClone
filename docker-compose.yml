@@ -1,6 +1,7 @@
 version: '3.8'
+
 services:
-  app: 
+  app:
     restart: unless-stopped
     build:
       context: .
@@ -13,78 +14,162 @@ services:
       SPRING_DATASOURCE_PASSWORD: dltjdgh1234
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
 
-
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
 
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092 
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     depends_on:
-      - db
-      - redis
-
-
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
 
   db:
     image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: dltjdgh1234
       MYSQL_DATABASE: mydb
-
     ports:
       - "3307:3306"
-
     volumes:
       - mysql_data:/var/lib/mysql
-
-
-  # three ways to connect
-  # 1. Port connection: Host <-> container ex) Spring(local) -> kafka(Container)
-  # 2. Docker connection: Container <> Container
-  # 3. Local: Host <-> Host
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pdltjdgh1234"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
   zookeeper:
-      image: confluentinc/cp-zookeeper:7.6.1
-      container_name: zookeeper
-      environment:
-        ZOOKEEPER_CLIENT_PORT: 2181
-        ZOOKEEPER_TICK_TIME: 2000
-      ports:
-       - "2181:2181"
-
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
 
   kafka:
     image: confluentinc/cp-kafka:7.6.1
     container_name: kafka
     depends_on:
-    - zookeeper
+      - zookeeper
     ports:
-    - "9092:9092"     
-    - "29092:29092"  
+      - "9092:9092"
+      - "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
-
       KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092"
       KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092"
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT"
       KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT_INTERNAL"
-
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
 
-    
-
   redis:
-      image: redis:7-alpine
-      ports:
-        - "6379:6379"
-      volumes:
-        - redis_data:/data
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
 
 volumes:
   mysql_data:
   kafka_data:
   redis_data:
+
+
+
+# version: '3.8'
+# services:
+#   app: 
+#     restart: unless-stopped
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     ports:
+#       - "8080:8080"
+#     environment:
+#       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/mydb
+#       SPRING_DATASOURCE_USERNAME: root
+#       SPRING_DATASOURCE_PASSWORD: dltjdgh1234
+#       SPRING_JPA_HIBERNATE_DDL_AUTO: update
+
+
+#       SPRING_DATA_REDIS_HOST: redis
+#       SPRING_DATA_REDIS_PORT: 6379
+
+#       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092 
+#     depends_on:
+#       - db
+#       - redis
+
+
+
+#   db:
+#     image: mysql:8.0
+#     environment:
+#       MYSQL_ROOT_PASSWORD: dltjdgh1234
+#       MYSQL_DATABASE: mydb
+
+#     ports:
+#       - "3307:3306"
+
+#     volumes:
+#       - mysql_data:/var/lib/mysql
+
+
+#   # three ways to connect
+#   # 1. Port connection: Host <-> container ex) Spring(local) -> kafka(Container)
+#   # 2. Docker connection: Container <> Container
+#   # 3. Local: Host <-> Host
+
+#   zookeeper:
+#       image: confluentinc/cp-zookeeper:7.6.1
+#       container_name: zookeeper
+#       environment:
+#         ZOOKEEPER_CLIENT_PORT: 2181
+#         ZOOKEEPER_TICK_TIME: 2000
+#       ports:
+#        - "2181:2181"
+
+
+#   kafka:
+#     image: confluentinc/cp-kafka:7.6.1
+#     container_name: kafka
+#     depends_on:
+#     - zookeeper
+#     ports:
+#     - "9092:9092"     
+#     - "29092:29092"  
+#     environment:
+#       KAFKA_BROKER_ID: 1
+#       KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+
+#       KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092"
+#       KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092"
+#       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT"
+#       KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT_INTERNAL"
+
+#       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+#       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+    
+
+#   redis:
+#       image: redis:7-alpine
+#       ports:
+#         - "6379:6379"
+#       volumes:
+#         - redis_data:/data
+
+# volumes:
+#   mysql_data:
+#   kafka_data:
+#   redis_data:
 
 
  

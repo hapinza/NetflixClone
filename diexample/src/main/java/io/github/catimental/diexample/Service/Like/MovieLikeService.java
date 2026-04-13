@@ -21,6 +21,7 @@ import io.github.catimental.diexample.domain.event.OutboxEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 
+
 @Service
 @Transactional
 public class MovieLikeService {
@@ -32,7 +33,6 @@ public class MovieLikeService {
     private final ObjectMapper objectMapper;
 
     public MovieLikeService(MovieLikeRepository movieLikeRepository, MemberRepository memberRepository, 
-        AnalyticsController analyticsController,
         OutboxRepository outboxRepository,
         ObjectMapper objectMapper){
         this.movieLikeRepository = movieLikeRepository;
@@ -43,16 +43,20 @@ public class MovieLikeService {
 
 
     public void upsert(Long memberId, Long movieId, boolean like){
-        var existing = movieLikeRepository.findByMemberIdAndMovieId(memberId, movieId);
+        memberRepository.findById(memberId).
+                            orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND, "no user"));
 
-        if(existing.isPresent()){
-            existing.get().update(like);
-            return ;
-        }
+        movieLikeRepository.upsertLike(memberId, movieId, like);
 
-        Member member = memberRepository.findById(memberId)
-                        .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND, "There is no user"));
+        createOutbox(memberId, movieId, like);
 
+        // Use atomic upsert to avoid race conditions from check-then-insert/update logic under concurrency
+
+        
+    }
+
+
+    private void createOutbox(Long memberId, Long movieId, boolean like){
         try{
             Map<String, Object> payload = new HashMap<>();
             payload.put("memberId", memberId);
@@ -62,22 +66,18 @@ public class MovieLikeService {
             String payloadJson = objectMapper.writeValueAsString(payload);
 
             OutboxEvent outboxEvent = new OutboxEvent(
-                    "LIKE",
-                    memberId + ":" + movieId,
-                    "LIKE_CREATED",
-                    payloadJson
+                "LIKE",
+                memberId + ":" + movieId,
+                "LIKE_CREATED",
+                payloadJson
             );
 
             outboxRepository.save(outboxEvent);
 
         }catch(Exception e){
-            throw new RuntimeException("Failed to create ");
+            throw new RuntimeException("Failed to create outbox event", e);
         }
 
-
-
-        
-        movieLikeRepository.save(new MovieLike(member, movieId, like));
 
     }
 

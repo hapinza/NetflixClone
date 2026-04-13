@@ -42,7 +42,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/members/register", "/api/members/login", "/auth/refresh", "/auth/logout",
                 "/movies/trending", "/analytics/views/**",  "/admin/failed-events/retry",
-                "/admin/failed-events/*/retry").permitAll()
+                "/admin/failed-events/*/retry", "/test/likes/**").permitAll()
                 .anyRequest().authenticated()
             );
           //  .addFilterBefore(new RateLimitFilter(limiter), UsernamePasswordAuthenticationFilter.class)

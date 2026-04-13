@@ -81,7 +81,7 @@ public OutboxEvent(
 }
 
 public void markSent(){
-    this.status = "SENDING";
+    this.status = "SENT";
     this.sentAt = LocalDateTime.now();
     this.lastError = null;
 }

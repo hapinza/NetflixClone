@@ -30,7 +30,7 @@ public class MovieLikeController {
         Long memberId = (Long) authentication.getPrincipal();
 
         movieLikeService.upsert(memberId, movieId, req.like());
-
+            
 
         return ResponseEntity.ok().build();
     }

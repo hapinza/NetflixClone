@@ -8,7 +8,7 @@ import axios from "axios";
 
 
 const tdmb = axios.create({
-baseURL: "https::/api.themoviedb/org/3";
+baseURL: "https::/api.themoviedb/org/3",
 params:{   // http query (parameter to send)
     api_key: process.env.REACT_APP_TMBD_API_KEY,
     //process.env  -> environment variable

@@ -10,7 +10,7 @@ function LoginPage() {
     e.preventDefault();
 
     try {
-      const res = await api.post("/api/members/login", { email, password });
+      const res = await api.post("/api/members/login", { loginId: email, password });
       const token = res.data.token;
       setAuthToken(token);
       setStatus("Login successful");

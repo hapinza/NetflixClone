@@ -10,7 +10,10 @@ function RegisterPage() {
     e.preventDefault();
 
     try {
-      await api.post("/api/members/register", { email, password });
+      await api.post("/api/members/register", {
+        loginId: email,
+        password,
+      });
       setStatus("Registration successful");
     } catch (err) {
       setStatus("Registration failed");

@@ -1,5 +1,11 @@
 import { useState } from "react";
 import api, { setAuthToken } from "./api/axios"
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import MoviesPage from "./pages/MoviePages";
+import LikesPage from "./pages/LikePages";
+
 
 function App(){
 return(

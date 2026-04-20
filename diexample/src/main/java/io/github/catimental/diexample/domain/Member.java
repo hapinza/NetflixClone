@@ -38,6 +38,8 @@ public class Member {
     public Member(String loginId, String loginPassword){
         this.loginId = loginId;
         this.loginPassword = loginPassword;
+        this.createdAt = LocalDateTime.now();
+        this.role = Role.USER;
     }
 
     public Long getId(){

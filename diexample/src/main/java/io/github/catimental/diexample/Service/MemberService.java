@@ -50,12 +50,10 @@ public class MemberService {
             throw new ApiException(ErrorCode.DUPLICATE_LOGIN_ID, "already exist");
         }
 
-        Member member = new Member();
-        member.setLoginId(req.loginId());
-        member.setLoginPassword(passwordEncoder.encode(req.password()));
-        member.assignUserRole();
-        member.setCreatedAt();
-
+        Member member = new Member(
+            req.loginId(),
+            passwordEncoder.encode(req.password())
+        );
         
         Member saved = memberRepository.save(member);
 

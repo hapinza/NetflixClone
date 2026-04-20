@@ -72,7 +72,7 @@ public class ViewEventService {
             movieId,
             LocalDateTime.now()
         );
-
+        
         // for responsibility, we don't immediately return. instead, wait until
         // it store the event into redis stream
         redisMovieEventPublisher.publishMovieViewed(event);

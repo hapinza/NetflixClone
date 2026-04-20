@@ -25,7 +25,7 @@ public class OutboxPoller {
     private final RedisStreamPublisher redisPublisher;
     private final ObjectMapper objectMapper;
 
-    private static final String STREAM_KEY = "like-events";
+    private static final String STREAM = "stream:movie:liked";
 
 
     @Scheduled(fixedDelay = 3000)
@@ -45,7 +45,7 @@ public class OutboxPoller {
                     new TypeReference<Map<String,String>>(){}
                 );
 
-                redisPublisher.publish(STREAM_KEY, payload);
+                redisPublisher.publish(STREAM, payload);
                 event.markSent();
             }catch(Exception e){
                 log.warn("Failed to publish outbox event. eventId={}, error={}",

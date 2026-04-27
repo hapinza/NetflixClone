@@ -6,7 +6,7 @@
 ![CI](https://img.shields.io/badge/GitHubActions-CI-black)
 
 
-# Scalable Backend System with Redis Rate Limiting & Load Testing
+# Fault-Tolerant Backend System with Redis Streams, Rate Limiting & Load Testing
 
 ## Key Achievements
 
@@ -17,7 +17,9 @@
 - Implemented idempotent processing and atomic operations to eliminate race conditions and duplicate event issues in concurrent environments
 - Built a failure recovery workflow with bulk retry and manual replay endpoints, achieving 70% recovery rate (7/10) while preventing infinite retries through bounded retry policies and dead-event handling
 - Containerized system with Docker and automated CI using GitHub Actions
-
+- Built a fault-tolerant event-driven backend system using Redis Streams, sustaining 15,000+ requests with 0% failure and zero data loss during simulated database outages.
+- Implemented the Outbox Pattern to ensure consistency between database transactions and event streams, successfully recovering 1,000+ pending events without data loss.
+  
 ---
 
 ## Why this project matters
@@ -114,6 +116,40 @@ Prevented concurrent refresh replay using conditional database rotation.
 ## Event Processing & Failure Recovery
 
 To ensure reliability in asynchronous event processing, the system implements idempotent handling and a bounded retry recovery workflow.
+
+### Outbox Pattern & Consistency Guarantee
+
+To ensure consistency between database state and event publication, the system implements the Outbox Pattern with a polling-based publisher.
+
+Instead of directly publishing events after a database write, events are first stored in an `outbox` table within the same transaction. A scheduled poller then reads pending events and publishes them to Redis Streams.
+
+To validate reliability, I simulated a failure scenario by temporarily disabling the outbox poller while generating concurrent requests, allowing events to accumulate in the `PENDING` state. After re-enabling the poller, the system successfully published all pending events.
+
+**Results:**
+
+- Processed 1,000+ concurrent requests with no data loss
+- Ensured all pending outbox events were eventually published
+- Verified transition from `PENDING → SENT` state for all events
+- Prevented inconsistencies between database state and event streams
+
+This experiment demonstrates how the Outbox Pattern guarantees eventual consistency between transactional data and asynchronous event delivery.
+
+### Database Outage Recovery Experiment
+
+To validate resilience under downstream database failures, I simulated a MySQL outage while sending burst traffic to the view-event ingestion API.
+
+During the outage, the API continued accepting events by writing them to Redis Streams instead of depending on immediate database writes. After the database was restored, the consumer resumed processing the backlog and persisted the pending events to MySQL.
+
+**Results:**
+
+- Sent 15,031 requests during the database outage
+- Maintained 0% HTTP request failure during the outage
+- Sustained p95 latency around 7.3ms while the database was unavailable
+- Recovered and persisted queued events after database restoration
+- Used idempotent consumers to prevent duplicate writes during replay
+
+This experiment validated that the ingestion path remained available during database failures and that queued events could be recovered after restoration.
+
 
 ### Idempotent Event Processing
 

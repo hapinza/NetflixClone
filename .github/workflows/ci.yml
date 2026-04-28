@@ -23,4 +23,5 @@ jobs:
           distribution: 'temurin'
 
       - name: Build and test
+        working-directory: diexample
         run: ./mvnw clean verify

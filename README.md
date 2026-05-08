@@ -43,25 +43,21 @@ This project simulates a production-style backend system for a streaming platfor
 ## System Architecture
 
 ```
-Client (React)
-    |
-    v
-Spring Security Filter Chain
-    |
-    v
-JWT Authentication Filter
-    |
-    v
-Rate Limiting Filter (Redis)
-    |
-    v
-Controller Layer
-    |
-    v
-Service Layer
-    |
-    v
-JPA / MySQL
+Client
+  ↓
+API
+  ↓
+Redis Stream
+  ↓
+Consumer
+  ↓
+MySQL
+
+       ↘
+   failed_events
+       ↘
+ retry/replay
+
 ```
 
 

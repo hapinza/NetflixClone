@@ -10,16 +10,12 @@
 
 ## Key Achievements
 
-- Built a scalable backend system using Spring Boot, Redis, and MySQL
-- Implemented Redis-based rate limiting using atomic Lua scripts
-- Achieved p95 latency of 32ms under concurrent load (k6 testing)
-- Designed stateless JWT authentication with refresh token rotation
-- Implemented idempotent processing and atomic operations to eliminate race conditions and duplicate event issues in concurrent environments
-- Built a failure recovery workflow with bulk retry and manual replay endpoints, achieving 70% recovery rate (7/10) while preventing infinite retries through bounded retry policies and dead-event handling
-- Containerized system with Docker and automated CI using GitHub Actions
 - Built a fault-tolerant event-driven backend system using Redis Streams, sustaining 15,000+ requests with 0% failure and zero data loss during simulated database outages.
 - Implemented the Outbox Pattern to ensure consistency between database transactions and event streams, successfully recovering 1,000+ pending events without data loss.
-  
+- Built an event-driven Redis read-model aggregation pipeline, serving movie statistics from Redis Hashes through idempotent consumers.
+- Implemented idempotent processing and atomic operations to eliminate race conditions and duplicate event issues in concurrent environments.
+- Implemented Redis-based rate limiting using atomic Lua scripts.
+- Achieved p95 latency of 32ms under concurrent load (k6 testing).
 ---
 
 ## Why this project matters
@@ -47,16 +43,19 @@ Client
   ↓
 API
   ↓
-Redis Stream
-  ↓
-Consumer
-  ↓
-MySQL
-
-       ↘
-   failed_events
-       ↘
- retry/replay
+MySQL Transaction
+ ├─ movie_like
+ └─ outbox
+      ↓
+ Outbox Poller
+      ↓
+ Redis Stream
+      ↓
+ Aggregation Consumer
+      ↓
+ Redis Read Model
+      ↓
+ Movie Stats API
 
 ```
 
@@ -129,6 +128,52 @@ To validate reliability, I simulated a failure scenario by temporarily disabling
 - Prevented inconsistencies between database state and event streams
 
 This experiment demonstrates how the Outbox Pattern guarantees eventual consistency between transactional data and asynchronous event delivery.
+
+
+### Redis Read Model Aggregation
+
+To support fast read operations without repeatedly querying the database, the system implements an event-driven Redis read model using Redis Streams and asynchronous aggregation consumers.
+
+After movie-like events are committed to the database, corresponding outbox events are published to Redis Streams. A dedicated aggregation consumer processes these events and updates Redis Hash-based movie statistics.
+
+Example:
+
+GET /movies/{movieId}/stats
+
+Response:
+
+{
+  "movieId": 123,
+  "likeCount": 57
+}
+
+
+Flow:
+
+MovieLike API
+→ movie_like table + outbox table
+→ Outbox Poller
+→ Redis Stream
+→ Aggregation Consumer
+→ Redis Read Model
+
+Redis read model structure:
+
+movie:{movieId}:stats
+  likeCount = N
+
+Key characteristics:
+
+- Event-driven aggregation using Redis Streams
+- Movie-level like count tracking
+- Redis Hash-based read model for fast stat retrieval
+- Reduced database reads by serving movie statistics directly from Redis
+- Eventual consistency between transactional data and cached read models
+- EventId-based idempotent processing to prevent duplicate aggregation updates
+
+This design separates the write path from the read path, reducing database load while maintaining consistency through durable outbox events.
+
+
 
 ### Database Outage Recovery Experiment
 
